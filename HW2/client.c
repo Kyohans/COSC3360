@@ -15,6 +15,9 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -35,19 +38,52 @@ int main(int argc, char *argv[])
     */
     int sockfd, portno, n;
 
-    struct sockaddr_in serv_addr;
+    struct sockaddr_in serv_addr;   // Structure containing an internet address (defined in netinet/in.h)
     struct hostent *server;         // Defines the host
 
-    char buffer[256];
-    if(argc < 3)
-    {
-        fprintf(stderr, "usage %s hostname port", argv[0]);
-    }
+    char buffer[64]; // Store characters read from user input
     
-    portno = atoi(argv[2]);
+    // Finds hostname of client
+    printf("Enter server hostname: ");
+    scanf("%s", buffer);
+    server = gethostbyname(buffer);
+    if (server == NULL)
+        error("ERROR: No such host found");
+    bzero(buffer,64);
+
+    // Acquires port number and opens a socket to communicate with server
+    printf("Enter server port number: ");
+    scanf("%s", buffer);
+    portno = atoi(buffer);
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd < 0)
         error("ERROR: Failed to open socket");
+    bzero(buffer, 64);
+
+    bzero((char *) &serv_addr, sizeof(serv_addr)); // Sets all values in serv_addr to zero
+
+    serv_addr.sin_family = AF_INET;
+
+    // Copies length of bytes from host address to server address
+    bcopy((char *)server->h_addr,
+          (char *)&serv_addr.sin_addr.s_addr,
+          server->h_length);
+    serv_addr.sin_port = htons(portno);
+
+    if(connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+        error("ERROR: Failed to connect");
+
+    printf("Enter a city name: ");
+    scanf("%s", buffer);
+    n = write(sockfd, buffer, strlen(buffer));
+    if(n < 0)
+        error("ERROR: Failed to write to socket");
+    
+    n = read(sockfd, buffer, strlen(buffer));
+    if(n < 0)
+        error("ERROR: Failed to read from socket");
 
     
+    
+    bzero(buffer, 64);
 }

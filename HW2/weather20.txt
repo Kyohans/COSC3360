@@ -1,0 +1,9 @@
+Amarillo,61,Sunny
+Austin,76,Partly Cloudy
+Corpus Christi,79,AM Thunderstorms
+Dallas,65,Sunny
+El Paso,67,Sunny
+Galveston,69,Thunderstorms
+Houston,77,AM Thunderstorms
+San Antonio,79,Mostly Cloudy
+Truth or Consequences,53,Sunny/Windy
