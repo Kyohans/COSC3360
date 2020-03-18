@@ -22,6 +22,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#define BUFFER_LIMIT 256
 
 void error(char *msg)
 {
@@ -41,7 +42,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in serv_addr;   // Structure containing an internet address (defined in netinet/in.h)
     struct hostent *server;         // Defines the host
 
-    char buffer[64]; // Store characters read from user input
+    char buffer[BUFFER_LIMIT]; // Store characters read from user input
     
     // Finds hostname of client
     printf("Enter server hostname: ");
@@ -49,7 +50,7 @@ int main(int argc, char *argv[])
     server = gethostbyname(buffer);
     if (server == NULL)
         error("ERROR: No such host found");
-    bzero(buffer,64);
+    bzero(buffer, BUFFER_LIMIT);
 
     // Acquires port number and opens a socket to communicate with server
     printf("Enter server port number: ");
@@ -58,10 +59,9 @@ int main(int argc, char *argv[])
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd < 0)
         error("ERROR: Failed to open socket");
-    bzero(buffer, 64);
+    bzero(buffer, BUFFER_LIMIT);
 
     bzero((char *) &serv_addr, sizeof(serv_addr)); // Sets all values in serv_addr to zero
-
     serv_addr.sin_family = AF_INET;
 
     // Copies length of bytes from host address to server address
@@ -70,20 +70,28 @@ int main(int argc, char *argv[])
           server->h_length);
     serv_addr.sin_port = htons(portno);
 
+    // Attempt to connect to server
     if(connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
-        error("ERROR: Failed to connect");
-
+        error("ERROR");
+    
+    // Prompts user to enter a name of a city
     printf("Enter a city name: ");
+    bzero(buffer, BUFFER_LIMIT);
     scanf("%s", buffer);
+
+    // Sends user input to server
     n = write(sockfd, buffer, strlen(buffer));
     if(n < 0)
         error("ERROR: Failed to write to socket");
+    bzero(buffer, BUFFER_LIMIT);
     
-    n = read(sockfd, buffer, strlen(buffer));
+    // Reads response from server and prints it to console
+    n = read(sockfd, buffer, BUFFER_LIMIT);
     if(n < 0)
         error("ERROR: Failed to read from socket");
+    printf("%s\n", buffer);
+    bzero(buffer, BUFFER_LIMIT);
 
-    
-    
-    bzero(buffer, 64);
+    close(sockfd);
+    return 0;
 }

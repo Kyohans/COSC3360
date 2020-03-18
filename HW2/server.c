@@ -9,9 +9,6 @@
     This file contains the server which opens a connection for the client and will receive data from the client.
 
     It will read in a file of city names and their corresponding weather reports. The client will be able to search for a city name a receive its weather report.
-
-    A port number is taken as an argument to establish the server.
-    For example: ./server 51717
 */
 
 #include <stdio.h>
@@ -47,8 +44,8 @@ int main(int argc, char *argv[])
     */
     int sockfd, newsockfd, portno, clilen, n;
 
-    char buffer[64];   // Store characters read from socket connection
-    char reply[128];    // Contains message sent by server to the client
+    char buffer[64];        // Store characters read from socket connection
+    char reply[256];        // 
     struct sockaddr_in serv_addr, cli_addr; // Structure containing an internet address (defined in netinet/in.h)
 
     // Opens file
@@ -71,25 +68,34 @@ int main(int argc, char *argv[])
         current->next = node;
         current = node;
 
-        char name;      // Used to acquire city names
+        char c;         // Used to acquire city names and weather conditions
         int i = 0;      // Index
 
         // Assigns city names to each node
-        while((name = getc(file)) != ',' && (name != EOF) && (i != 64))
+        while((c = getc(file)) != ',' && (c != EOF) && (i != 64))
         {
-            node->cityName[i] = name;
+            node->cityName[i] = c;
+            i++;
+        }
+        if(c == EOF)
+            break;
+
+        // Assigns temperature to each node
+        fscanf(file, "%d,", &node->temp);
+
+        // Assigns weather condition to each node
+        i = 0;
+        while ((c = getc(file)) != '\n' && (c != EOF))
+        {
+            node->weather[i] = c;
             i++;
         }
 
-        if(name == EOF)
-            break;
-
-        fscanf(file, "%d , %s", &node->temp, node->weather);
-        while((name = getc(file)) != '\n' && (name != EOF));
-        if(name == EOF)
+        // Ends loop if reading char reads the end of the file
+        if (c == EOF)
             break;
     }
-    fclose(file);
+    fclose(file);  
 
     // Acquires server port number
     printf("Enter server port number: ");
@@ -102,7 +108,7 @@ int main(int argc, char *argv[])
     if (sockfd < 0)
         error("ERROR: Failed to open socket");
 
-    bzero((char *)&serv_addr, sizeof(serv_addr)); // Sets all values in serv_addr to zero
+    bzero((char *)&serv_addr, sizeof(serv_addr));   // Sets all values in serv_addr to zero
 
     serv_addr.sin_family = AF_INET;             // Assigns address family to server address
     serv_addr.sin_port = htons(portno);         // Assigns port number in host byte order to a port number in network byte order
@@ -132,26 +138,36 @@ int main(int argc, char *argv[])
             error("ERROR: Failed to read from socket");
         printf("Weather report for %s\n", buffer);
 
-        bzero(reply,128);
-        sprintf(reply, "-1 -1");
+        bzero(reply, 256);
+        sprintf(reply, "0");
         current = head;
         while((current = current->next) != NULL)
         {
             if(strcmp(buffer, current->cityName) == 0)
             {
-                bzero(reply, 128);
-                sprintf(reply, "Tomorrow's maximum temperature is %d F\n", current->temp);
-                sprintf(reply, "Tomorrow's sky condition is %s", current->weather);
-                printf("Tomorrow's maximum temperature is %d F %s\n", current->temp, current->weather);
-                printf("Tomorrow's sky condition is %s", current->weather);
+                bzero(reply, 256);
+                sprintf(reply, "Tomorrow's maximum temperature: %d\nTomorrow's weather condition: %s\n", current->temp, current->weather);
+                printf("%s", reply);
                 break;
             }
         }
-        
-        n = write(newsockfd, reply, strlen(reply));
-        if(n < 0)
-            error("ERROR: Failed to write to socket");
 
+        // Replies to client and send it
+        if(strcmp(reply,"0") == 0)
+        {
+            n = write(newsockfd, "No data\n", 10);
+            if(n < 0)
+                error("ERROR: Failed to write to socket");
+            printf("No data\n");
+        }
+        else
+        {
+            n = write(newsockfd, reply, strlen(reply));
+            if (n < 0)
+                error("ERROR: Failed to write to socket");
+        }
+
+        // Close socket and clears it for a new incoming connection
         close(newsockfd);
     }
 
