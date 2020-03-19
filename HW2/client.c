@@ -22,7 +22,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#define BUFFER_LIMIT 256
+#define BUFFER_LIMIT 64
+#define REPLY_LIMIT 256
 
 void error(char *msg)
 {
@@ -42,7 +43,8 @@ int main(int argc, char *argv[])
     struct sockaddr_in serv_addr;   // Structure containing an internet address (defined in netinet/in.h)
     struct hostent *server;         // Defines the host
 
-    char buffer[BUFFER_LIMIT]; // Store characters read from user input
+    char buffer[BUFFER_LIMIT];  // Store characters read from user input
+    char reply[REPLY_LIMIT];    // Contains the server's reply
     
     // Finds hostname of client
     printf("Enter server hostname: ");
@@ -76,8 +78,14 @@ int main(int argc, char *argv[])
     
     // Prompts user to enter a name of a city
     printf("Enter a city name: ");
-    bzero(buffer, BUFFER_LIMIT);
-    scanf("%s", buffer);
+
+    // Clears input buffer
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+    
+    // Gets user input and removes trailing newline (Appears after user presses ENTER)
+    fgets(buffer, BUFFER_LIMIT, stdin);
+    strtok(buffer, "\n");
 
     // Sends user input to server
     n = write(sockfd, buffer, strlen(buffer));
@@ -86,11 +94,12 @@ int main(int argc, char *argv[])
     bzero(buffer, BUFFER_LIMIT);
     
     // Reads response from server and prints it to console
-    n = read(sockfd, buffer, BUFFER_LIMIT);
+    bzero(reply, REPLY_LIMIT);
+    n = read(sockfd, reply, REPLY_LIMIT);
     if(n < 0)
         error("ERROR: Failed to read from socket");
-    printf("%s\n", buffer);
-    bzero(buffer, BUFFER_LIMIT);
+    printf("%s\n", reply);
+    bzero(reply, REPLY_LIMIT);
 
     close(sockfd);
     return 0;

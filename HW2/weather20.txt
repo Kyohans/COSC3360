@@ -7,3 +7,8 @@ Galveston,69,Thunderstorms
 Houston,77,AM Thunderstorms
 San Antonio,79,Mostly Cloudy
 Truth or Consequences,53,Sunny/Windy
+Paris,35,Chilly
+Hong Kong,77,Sunny
+Chicago,73,Clear Skies
+Tokyo,42,Foggy
+Seattle,56,AM Thunderstorms

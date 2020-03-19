@@ -18,12 +18,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#define BUFFER_LIMIT 64
+#define REPLY_LIMIT 256
 
 struct city
 {
-    char cityName[64];
+    char cityName[BUFFER_LIMIT];
     int temp;
-    char weather[64];
+    char weather[BUFFER_LIMIT];
     struct city* next;
 };
 
@@ -44,9 +46,9 @@ int main(int argc, char *argv[])
     */
     int sockfd, newsockfd, portno, clilen, n;
 
-    char buffer[64];        // Store characters read from socket connection
-    char reply[256];        // 
-    struct sockaddr_in serv_addr, cli_addr; // Structure containing an internet address (defined in netinet/in.h)
+    char buffer[BUFFER_LIMIT];                  // Store characters read from client
+    char reply[REPLY_LIMIT];                    // Contains message to be sent to client
+    struct sockaddr_in serv_addr, cli_addr;     // Structure containing an internet address (defined in netinet/in.h)
 
     // Opens file
     printf("Enter filename: ");
@@ -54,16 +56,16 @@ int main(int argc, char *argv[])
     FILE *file = fopen(buffer,"r");
     if(file == NULL)
         error("ERROR");
-    bzero(buffer, 64);
+    bzero(buffer, BUFFER_LIMIT);
 
     // Creates a linked list to access and assign the city names to their corresponding temperatures and weather conditions
     struct city* head = (struct city*)malloc(sizeof(struct city));
     struct city* current = head;
 
-    while(1)
+    for(;;)
     {
         struct city* node = (struct city*)malloc(sizeof(struct city));
-        bzero(node->cityName, 64);
+        bzero(node->cityName, BUFFER_LIMIT);
         node->next = NULL;
         current->next = node;
         current = node;
@@ -72,13 +74,11 @@ int main(int argc, char *argv[])
         int i = 0;      // Index
 
         // Assigns city names to each node
-        while((c = getc(file)) != ',' && (c != EOF) && (i != 64))
+        while((c = getc(file)) != ',' && (c != EOF) && (i != BUFFER_LIMIT))
         {
             node->cityName[i] = c;
             i++;
         }
-        if(c == EOF)
-            break;
 
         // Assigns temperature to each node
         fscanf(file, "%d,", &node->temp);
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
         if (c == EOF)
             break;
     }
-    fclose(file);  
+    fclose(file);
 
     // Acquires server port number
     printf("Enter server port number: ");
@@ -129,30 +129,36 @@ int main(int argc, char *argv[])
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
         if (newsockfd < 0)
             error("ERROR: Failed to accept");
-        printf("Connection accepted\n");
+        printf("\nConnection accepted\n");
 
         // Clears buffer and reads input from client
-        bzero(buffer, 64);
-        n = read(newsockfd, buffer, 64);
+        bzero(buffer, BUFFER_LIMIT);
+        n = read(newsockfd, buffer, BUFFER_LIMIT);
         if (n < 0)
             error("ERROR: Failed to read from socket");
         printf("Weather report for %s\n", buffer);
 
-        bzero(reply, 256);
+        // Empties reply buffer and store "0" in it as default for error checking purposes
+        bzero(reply, REPLY_LIMIT);
         sprintf(reply, "0");
+
+        // Set current pointer to head of linked list and checks each node for a matching city name
         current = head;
         while((current = current->next) != NULL)
         {
+            // Compares current node's city name with the name sent by the client
             if(strcmp(buffer, current->cityName) == 0)
             {
-                bzero(reply, 256);
+                // Empties reply buffer and store it with the cities temperature and weather condition
+                bzero(reply, REPLY_LIMIT);
                 sprintf(reply, "Tomorrow's maximum temperature: %d\nTomorrow's weather condition: %s\n", current->temp, current->weather);
                 printf("%s", reply);
                 break;
             }
         }
 
-        // Replies to client and send it
+        /*  If no city specified by client can be found then send "No data" to client
+            else, reply to client with the temperature and weather condition of said city */
         if(strcmp(reply,"0") == 0)
         {
             n = write(newsockfd, "No data\n", 10);
@@ -162,7 +168,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            n = write(newsockfd, reply, strlen(reply));
+            n = write(newsockfd, reply, REPLY_LIMIT);
             if (n < 0)
                 error("ERROR: Failed to write to socket");
         }
