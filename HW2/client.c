@@ -9,9 +9,6 @@
     This file contains the client which communicates with the server program to retrieve data.
 
     The client allows the user to search for a city name and if it's on the file read by the server, then it will receive the weather report of said city.
-
-    A hostname and port number are taken as arguments to establish a connection with the server.
-    For example: ./client localhost 51717
 */
 
 #include <stdio.h>
