@@ -40,33 +40,37 @@ void* carThread(void* arg)
     if(temp->direction == 'N')
     {
         direction = "Northbound";
-        northInside++;
+        numNorth++;
     }
     else if(temp->direction == 'S')
     {
         direction = "Southbound";
-        southInside++;
+        numSouth++;
     }
 
     cout << direction << " car # " << temp->carNo << " arrives at the tunnel" << endl;
     pthread_mutex_lock(&lock);
+
     while(wait || inside >= maxCars)
     {
-        cout << temp->carNo << " " << inside << " vs " << maxCars << endl;
         wait = true;
         if(inside < maxCars)
+        {
             wait = false;
+        }
 
         pthread_cond_wait(&wake, &lock);
     }
 
-    inside++;
-    if(direction == "Northbound")
+    if(wait)
+        cout << "--- " << direction << " car # " << temp->carNo << " has to wait." << endl;
+
+    if(direction == "Northbound" && !wait)
     {
         if(northInside <= maxNCars && northInside <= maxCars)
         {
             cout << direction << " car # " << temp->carNo << " enters the tunnel." << endl;
-            numNorth++;
+            inside++;
             northInside++;
             
             pthread_mutex_unlock(&lock);
@@ -75,14 +79,15 @@ void* carThread(void* arg)
 
             cout << direction << " car # " << temp->carNo << " exits the tunnel." << endl;
             northInside--;
+            inside--;
         }
     }
-    else if (direction == "Southbound")
+    else if (direction == "Southbound" && !wait)
     {
         if (southInside <= maxSCars && southInside <= maxCars)
         {
             cout << direction << " car # " << temp->carNo << " enters the tunnel." << endl;
-            numSouth++;
+            inside++;
             southInside++;
 
             pthread_mutex_unlock(&lock);
@@ -91,13 +96,13 @@ void* carThread(void* arg)
 
             cout << direction << " car # " << temp->carNo << " exits the tunnel." << endl;
             southInside--;
+            inside--;
         }
     }
 
     if(wait)
         delayed++;
     
-    inside--;
     pthread_cond_broadcast(&wake);
     pthread_mutex_unlock(&lock);
 }
@@ -128,7 +133,15 @@ int main()
 
         cin >> input;
         newCar->time = stoi(input);
-        newCar->carNo = numOfCars + 1;
+
+        switch(newCar->direction)
+        {
+            case 'N':
+                newCar->carNo = numNorth + 1;
+                break;
+            case 'S':
+                newCar->carNo = numSouth + 1;
+        }
 
         pthread_t tid;
         pthread_create(&tid, NULL, carThread, (void*)newCar);
