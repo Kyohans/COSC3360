@@ -51,27 +51,45 @@ void* carThread(void* arg)
     cout << direction << " car # " << temp->carNo << " arrives at the tunnel" << endl;
     pthread_mutex_lock(&lock);
 
-    while(wait || inside >= maxCars)
+    while(inside >= maxCars)
     {
-        wait = true;
-        if(inside < maxCars)
+        switch(direction[0])
         {
-            wait = false;
+            case 'N':
+            {
+                if(northInside >= maxNCars)
+                    wait = true;
+                else
+                    wait = false;
+
+                break;
+            }
+            case 'S':
+            {
+                if(southInside >= maxSCars)
+                    wait = true;
+                else
+                    wait = false;  
+                
+                break;
+            }
         }
+
+        if(inside >= maxCars)
+            wait = true;
+        else
+            wait = false;
 
         pthread_cond_wait(&wake, &lock);
     }
 
-    if(wait)
-        cout << "--- " << direction << " car # " << temp->carNo << " has to wait." << endl;
-
-    if(direction == "Northbound" && !wait)
+    if(direction == "Northbound")
     {
-        if(northInside <= maxNCars && northInside <= maxCars)
+        if(northInside < maxNCars && northInside < maxCars)
         {
             cout << direction << " car # " << temp->carNo << " enters the tunnel." << endl;
-            inside++;
-            northInside++;
+            ++inside;
+            ++northInside;
             
             pthread_mutex_unlock(&lock);
             sleep(temp->time);
@@ -81,14 +99,16 @@ void* carThread(void* arg)
             northInside--;
             inside--;
         }
+        else
+            wait = true;
     }
-    else if (direction == "Southbound" && !wait)
+    else if (direction == "Southbound")
     {
-        if (southInside <= maxSCars && southInside <= maxCars)
+        if (southInside < maxSCars && southInside < maxCars)
         {
             cout << direction << " car # " << temp->carNo << " enters the tunnel." << endl;
-            inside++;
-            southInside++;
+            ++inside;
+            ++southInside;
 
             pthread_mutex_unlock(&lock);
             sleep(temp->time);
@@ -98,6 +118,8 @@ void* carThread(void* arg)
             southInside--;
             inside--;
         }
+        else
+            wait = true;
     }
 
     if(wait)
@@ -141,6 +163,7 @@ int main()
                 break;
             case 'S':
                 newCar->carNo = numSouth + 1;
+                break;
         }
 
         pthread_t tid;
