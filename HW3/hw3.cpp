@@ -1,9 +1,14 @@
 /*
-    Khalyl Smith
+    Name: Khalyl Smith
     ID: 1894880
+    Class: MW 4-5:30
 
     Assignment 3 - The Poorly Ventilated Tunnel
+
+    Compile with: g++ -fpermissive main.cpp -lpthread
+    Run with IO Redirection: ./a.out < input.txt
 */
+
 #include <iostream>
 #include <pthread.h>
 #include <fstream>
@@ -51,6 +56,7 @@ void* carThread(void* arg)
     cout << direction << " car # " << temp->carNo << " arrives at the tunnel" << endl;
     pthread_mutex_lock(&lock);
 
+    // Loop checks if car has to wait to enter the tunnel
     while(inside >= maxCars)
     {
         switch(direction[0])
@@ -127,6 +133,7 @@ void* carThread(void* arg)
     
     pthread_cond_broadcast(&wake);
     pthread_mutex_unlock(&lock);
+    return temp;
 }
 
 
